@@ -121,7 +121,11 @@ exec &> >(tee -a "$LOGFILE")
 
 # Database dump function
 dbdump () {
-    echo "Starting mongodump for $DBHOST:$DBPORT"
+    if [[ -z $1 ]]; then
+        echo "FATAL: Output path not defined, check configuration"
+        cleanupAndExit 1
+    fi
+    echo "Starting mongodump for $DBHOST:$DBPORT to $1"
     $mongodump --version
     $mongodump --host=$DBHOST:$DBPORT --out=$1 $OPT
     resultcode=$?
@@ -163,6 +167,29 @@ compression () {
     fi
 
     return 0
+}
+
+cleanupAndExit () {
+    STATUS=$1
+
+    # Clean up IO redirection if we plan not to deliver log via e-mail.
+    #[ ! "x$MAILCONTENT" == "xlog" ] && exec 1>&6 2>&7 6>&- 7>&-
+    
+    if [ "$MAILCONTENT" = "log" ]; then
+    
+        if [[ $dbdumpresult != 0 ]]; then
+            cat "$LOGFILE" | mail -s "MongoDB Backup ERRORS REPORTED: Backup log for $HOST - $DATE" $MAILADDR
+        else
+            cat "$LOGFILE" | mail -s "MongoDB Backup Log for $HOST - $DATE" $MAILADDR
+        fi
+    else
+        cat "$LOGFILE"
+    fi
+    
+    # Clean up Logfile
+    rm -f "$LOGFILE" "$LOGERR"
+    
+    exit $STATUS
 }
 
 # Run command before we begin
@@ -288,27 +315,4 @@ if [ "$POSTBACKUP" ]; then
     echo ======================================================================
 fi
 
-# Clean up IO redirection if we plan not to deliver log via e-mail.
-#[ ! "x$MAILCONTENT" == "xlog" ] && exec 1>&6 2>&7 6>&- 7>&-
-
-if [ "$MAILCONTENT" = "log" ]; then
-
-    if [[ $dbdumpresult != 0 ]]; then
-        cat "$LOGFILE" | mail -s "MongoDB Backup ERRORS REPORTED: Backup log for $HOST - $DATE" $MAILADDR
-    else
-        cat "$LOGFILE" | mail -s "MongoDB Backup Log for $HOST - $DATE" $MAILADDR
-    fi
-else
-    cat "$LOGFILE"
-fi
-
-# TODO: Would be nice to know if there were any *actual* errors in the $LOGERR
-STATUS=0
-if [ -s "$LOGERR" ]; then
-    STATUS=1
-fi
-
-# Clean up Logfile
-rm -f "$LOGFILE" "$LOGERR"
-
-exit $STATUS
+cleanupAndExit $dbdumpresult
