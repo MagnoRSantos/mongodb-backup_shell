@@ -20,159 +20,27 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+PROGNAME=$(basename "$0" | cut -d. -f1)
 
-# Optional, default to all databases 
-# DBNAME=""
+# External config - override default values set above
+for file in /etc/default/$PROGNAME /etc/sysconfig/$PROGNAME ./$PROGNAME; do
+  if [ -f "$file" ]; then
+      echo "Reading config file $file"
+      source $file
+  fi
+done
 
-# Optional, if authentication is enabled
-DBUSERNAME="admin"
-DBPASSWORD="admin"
-DBAUTHDB="admin"
-
-# Host name (or IP address) of mongo server e.g localhost
-DBHOST="127.0.0.1"
-
-# Port that mongo is listening on
-DBPORT="27017"
-
-# Backup directory location e.g /backups
-BACKUPDIR="/data/backups/mongodb"
-
-# Optional, override to specify path to MongoDB binaries
-#BINPATH="/root/mongodb-linux-x86_64-3.1.7/bin/"
+# Include extra config file if specified on commandline, e.g. for backuping several remote dbs from central server
+if [ ! -z "$1" ] && [ -f "$1" ]; then
+    echo "Reading extra commandline config file $1"
+    source ${1}
+fi
 
 mongodump="${BINPATH}mongodump"
 mongo="${BINPATH}mongo"
 
-# Mail setup
-# What would you like to be mailed to you?
-# - log   : send only log file
-# - files : send log file and sql files as attachments (see docs)
-# - stdout : will simply output the log to the screen if run manually.
-# - quiet : Only send logs if an error occurs to the MAILADDR.
-MAILCONTENT="log"
-
-# Set the maximum allowed email size in k. (4000 = approx 5MB email [see docs])
-MAXATTSIZE="4000"
-
-# Email Address to send mail to? (user@domain.com)
-MAILADDR="mark.helmstetter@mongodb.com"
-
 command -v mail >/dev/null 2>&1 || { echo >&2 "mail command required but it's not installed.  Aborting."; exit 1; }
 
-# ============================================================================
-# === SCHEDULING AND RETENTION OPTIONS ( Read the doc's below for details )===
-#=============================================================================
-
-# Do you want to do daily backups? How long do you want to keep them?
-DODAILY="yes"
-DAILYRETENTION=7
-
-# Which day do you want weekly backups? (1 to 7 where 1 is Monday)
-DOWEEKLY="yes"
-WEEKLYDAY=6
-WEEKLYRETENTION=4
-
-# Do you want monthly backups? How long do you want to keep them?
-DOMONTHLY="yes"
-MONTHLYRETENTION=4
-
-# ============================================================
-# === ADVANCED OPTIONS ( Read the doc's below for details )===
-#=============================================================
-
-# Choose Compression type. (gzip or bzip2)
-COMP="gzip"
-
-# Choose if the uncompressed folder should be deleted after compression has completed
-CLEANUP="yes"
-
-# Additionally keep a copy of the most recent backup in a seperate directory.
-LATEST="yes"
-
-# Make Hardlink not a copy
-LATESTLINK="yes"
-
-# Use oplog for point-in-time snapshotting.
-OPLOG="yes"
-
-# Choose other Server if is Replica-Set Master
-REPLICAONSLAVE="yes"
-
-# Allow DBUSERNAME without DBAUTHDB
-REQUIREDBAUTHDB="yes"
-
-# Command to run before backups (uncomment to use)
-# PREBACKUP=""
-
-# Command run after backups (uncomment to use)
-# POSTBACKUP=""
-
-#=====================================================================
-# Options documentation
-#=====================================================================
-# Set DBUSERNAME and DBPASSWORD of a user that has at least SELECT permission
-# to ALL databases.
-#
-# Set the DBHOST option to the server you wish to backup, leave the
-# default to backup "this server".(to backup multiple servers make
-# copies of this file and set the options for that server)
-#
-# You can change the backup storage location from /backups to anything
-# you like by using the BACKUPDIR setting..
-#
-# The MAILCONTENT and MAILADDR options and pretty self explanatory, use
-# these to have the backup log mailed to you at any email address or multiple
-# email addresses in a space seperated list.
-#
-# (If you set mail content to "log" you will require access to the "mail" program
-# on your server. If you set this to "files" you will have to have mutt installed
-# on your server. If you set it to "stdout" it will log to the screen if run from
-# the console or to the cron job owner if run through cron. If you set it to "quiet"
-# logs will only be mailed if there are errors reported. )
-#
-#
-# Finally copy automongobackup.sh to anywhere on your server and make sure
-# to set executable permission. You can also copy the script to
-# /etc/cron.daily to have it execute automatically every night or simply
-# place a symlink in /etc/cron.daily to the file if you wish to keep it
-# somwhere else.
-#
-# NOTE: On Debian copy the file with no extention for it to be run
-# by cron e.g just name the file "automongobackup"
-#
-# Thats it..
-#
-#
-# === Advanced options ===
-#
-# To set the day of the week that you would like the weekly backup to happen
-# set the WEEKLYDAY setting, this can be a value from 1 to 7 where 1 is Monday,
-# The default is 6 which means that weekly backups are done on a Saturday.
-#
-# Use PREBACKUP and POSTBACKUP to specify Pre and Post backup commands
-# or scripts to perform tasks either before or after the backup process.
-#
-#
-#=====================================================================
-# Backup Rotation..
-#=====================================================================
-#
-# Daily backups are executed if DODAILY is set to "yes". 
-# The number of daily backup copies to keep for each day (i.e. 'Monday', 'Tuesday', etc.) is set with DAILYRETENTION. 
-# DAILYRETENTION=0 rotates daily backups every week (i.e. only the most recent daily copy is kept). -1 disables rotation.
-#
-# Weekly backups are executed if DOWEEKLY is set to "yes".
-# WEEKLYDAY [1-7] sets which day a weekly backup occurs when cron.daily scripts are run.
-# Rotate weekly copies after the number of weeks set by WEEKLYRETENTION.
-# WEEKLYRETENTION=0 rotates weekly backups every week. -1 disables rotation.
-#
-# Monthly backups are executed if DOMONTHLY is set to "yes".
-# Monthy backups occur on the first day of each month when cron.daily scripts are run.
-# Rotate monthly backups after the number of months set by MONTHLYRETENTION.
-# MONTHLYRETENTION=0 rotates monthly backups upon each execution. -1 disables rotation.
-#
-#=====================================================================
 
 shellout () {
     if [ -n "$1" ]; then
@@ -182,15 +50,6 @@ shellout () {
     exit 0
 }
 
-# External config - override default values set above
-for x in default sysconfig; do
-  if [ -f "/etc/$x/automongobackup" ]; then
-      source /etc/$x/automongobackup
-  fi
-done
-
-# Include extra config file if specified on commandline, e.g. for backuping several remote dbs from central server
-[ ! -z "$1" ] && [ -f "$1" ] && source ${1}
 
 #=====================================================================
 
@@ -262,6 +121,7 @@ exec &> >(tee -a "$LOGFILE")
 
 # Database dump function
 dbdump () {
+    echo "Starting mongodump for $DBHOST:$DBPORT"
     $mongodump --version
     $mongodump --host=$DBHOST:$DBPORT --out=$1 $OPT
     resultcode=$?
@@ -335,8 +195,6 @@ secondary=`$mongo --quiet <<\EOF
   hosts.forEach(function(e){if (e!== primary) {secondaries.push(e)}});
   print(secondaries[0]);
 EOF`
-
-echo $secondary
 
 if [ -n "$secondary" ]; then
     DBHOST=${secondary%%:*}
