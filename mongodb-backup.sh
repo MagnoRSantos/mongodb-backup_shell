@@ -36,9 +36,11 @@ DBHOST="127.0.0.1"
 DBPORT="27017"
 
 # Backup directory location e.g /backups
-BACKUPDIR="/data2/backups/mongodb"
+BACKUPDIR="/data/backups/mongodb"
 
-BINPATH="/root/mongodb-linux-x86_64-3.1.7/bin/"
+# Optional, override to specify path to MongoDB binaries
+#BINPATH="/root/mongodb-linux-x86_64-3.1.7/bin/"
+
 mongodump="${BINPATH}mongodump"
 mongo="${BINPATH}mongo"
 
