@@ -22,7 +22,7 @@
 
 PROGNAME=$(basename "$0" | cut -d. -f1)
 
-# External config - override default values set above
+# Read config files 
 for file in /etc/default/$PROGNAME /etc/sysconfig/$PROGNAME ./$PROGNAME; do
   if [ -f "$file" ]; then
       echo "Reading config file $file"
@@ -52,7 +52,7 @@ shellout () {
 
 
 #=====================================================================
-
+currentDate=`date +%s`
 PATH=/usr/local/bin:/usr/bin:/bin
 DATE=`date +%Y-%m-%d_%Hh%Mm`                      # Datestamp e.g 2002-09-21
 DOW=`date +%A`                                    # Day of the week e.g. Monday
@@ -63,15 +63,6 @@ W=`date +%V`                                      # Week Number e.g 37
 LOGFILE=$BACKUPDIR/$DBHOST-`date +%H%M`.log       # Logfile Name
 LOGERR=$BACKUPDIR/ERRORS_$DBHOST-`date +%H%M`.log # Logfile Name
 BACKUPFILES=""
-OPT=""                                            # OPT string for use with mongodump
-
-# Do we need to use a username/password?
-if [ "$DBUSERNAME" ]; then
-    OPT="$OPT --username=$DBUSERNAME --password=$DBPASSWORD"
-    if [ "$REQUIREDBAUTHDB" = "yes" ]; then
-        OPT="$OPT --authenticationDatabase=$DBAUTHDB"
-    fi
-fi
 
 # Do we use oplog for point-in-time snapshotting?
 if [ "$OPLOG" = "yes" ]; then
@@ -132,6 +123,8 @@ dbdump () {
     echo "mongodump result: $resultcode"
     if [[ $resultcode != 0 ]]; then
       echo "ERROR mongodump exited with code $resultcode"
+    else
+      echo $currentDate > $lastBackupTimestampFile
     fi
     return $resultcode
 }
