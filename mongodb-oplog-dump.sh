@@ -60,18 +60,19 @@ fi
 maxTimestamp="$(max_number $lastBackupTimestamp $lastOplogTimestamp)"
 
 if [ -n "$maxTimestamp" ]; then
-    OPT="$OPT -q '{ts:{\$gte:Timestamp($maxTimestamp,1)}}'"
+    OPT="$OPT -q \"{ts:{\$gte:Timestamp($maxTimestamp,1)}}\""
 fi
 echo "$OPT"
 
 currentDate=`date +%s`
+DATE=`date +%Y-%m-%d_%H:%M:%S`
 
 echo "currentDate is $currentDate"
 echo "lastBackupTimestamp is $lastBackupTimestamp"
 echo "lastOplogTimestamp is $lastOplogTimestamp"
 echo "maxTimestamp is $maxTimestamp"
 
-FILE="$BACKUPDIR/oplog/$currentDate"
+FILE="$BACKUPDIR/oplog/$DATE-$maxTimestamp"
 
 oplogdump $FILE
 
