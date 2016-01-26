@@ -79,11 +79,6 @@ if [ "$DBNAME" ]; then
   OPT="$OPT -d $DBNAME"
 fi
 
-# Use mongodump built-in compression? (available only in 3.2+) 
-if [ "$COMP" = "mongo" ]; then
-    OPT="$OPT --gzip"
-fi
-
 # Create required directories
 mkdir -p $BACKUPDIR/{daily,weekly,monthly} || shellout 'failed to create directories'
 
