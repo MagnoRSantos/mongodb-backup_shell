@@ -23,7 +23,7 @@
 PROGNAME=$(basename "$0" | cut -d. -f1)
 
 # Read config files 
-for file in /etc/default/$PROGNAME /etc/sysconfig/$PROGNAME ./$PROGNAME; do
+for file in /etc/default/$PROGNAME /etc/sysconfig/$PROGNAME; do
   if [ -f "$file" ]; then
       echo "Reading config file $file"
       source $file
@@ -72,6 +72,16 @@ fi
 # Do we need to backup only a specific database?
 if [ "$DBNAME" ]; then
   OPT="$OPT -d $DBNAME"
+fi
+
+# Do we need to backup only a specific database?
+if [ "$DBNAME" ]; then
+  OPT="$OPT -d $DBNAME"
+fi
+
+# Use mongodump built-in compression? (available only in 3.2+) 
+if [ "$COMP" = "mongo" ]; then
+    OPT="$OPT --gzip"
 fi
 
 # Create required directories
@@ -138,9 +148,14 @@ compression () {
     if [ -n "$COMP" ]; then
         [ "$COMP" = "gzip" ] && SUFFIX=".tgz"
         [ "$COMP" = "bzip2" ] && SUFFIX=".tar.bz2"
-        echo Tar and $COMP to "$file$SUFFIX"
-        cd "$dir" && tar -cf - "$file" | $COMP -c > "$file$SUFFIX"
-        cd - >/dev/null || return 1
+        if [ "$COMP" = "mongo" ]; then
+            SUFFIX=".tar"
+            cd "$dir" && tar -cvf "$file$SUFFIX" $file
+        else
+            echo Tar and $COMP to "$file$SUFFIX"
+            cd "$dir" && tar -cf - "$file" | $COMP -c > "$file$SUFFIX"
+            cd - >/dev/null || return 1
+        fi
     else
         echo "No compression option set, check advanced settings"
     fi
@@ -283,9 +298,15 @@ elif [[ $DODAILY = "yes" ]] ; then
 
 fi
 
-dbdump $FILE && compression $FILE
-
+dbdump $FILE 
 dbdumpresult=$?
+
+echo dbdumpresult $dbdumpresult
+
+if [[ $dbdumpresult = 0 ]]; then
+    compression $FILE
+fi
+
 
 
 echo ----------------------------------------------------------------------
