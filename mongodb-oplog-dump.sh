@@ -101,7 +101,7 @@ echo "$OPT"
 DATE=`date +%Y-%m-%d_%H:%M:%S`
 FILE="$BACKUPDIR/oplog/$DATE-$maxTimestamp"
 mkdir -p "$FILE"
-LOGFILE=$FILE/$DBHOST-`date +%H%M`.log
+LOGFILE=$FILE/$HOST-`date +%H%M`.log
 
 # IO redirection for logging.
 # Redirect STDERR to STDOUT

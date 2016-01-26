@@ -206,16 +206,6 @@ if [ "$PREBACKUP" ]; then
     echo
 fi
 
-# Hostname for LOG information
-if [ "$DBHOST" = "localhost" -o "$DBHOST" = "127.0.0.1" ]; then
-    HOST=`hostname`
-    if [ "$SOCKET" ]; then
-        OPT="$OPT --socket=$SOCKET"
-    fi
-else
-    HOST=$DBHOST
-fi
-
 
 secondary=`$mongo --quiet <<\EOF
   var primary=rs.isMaster().primary;
