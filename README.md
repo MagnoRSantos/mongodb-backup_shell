@@ -4,7 +4,7 @@ Shell script for automating MongoDB backups
 The backup directory should contain the following entries:
 
 ```
-[root@ip-10-0-213-12 mongodb]# ls -lha
+# ls -lha
 total 8.0K
 drwxr-xr-x 7 root root 123 Jan 26 16:46 .
 drwxr-xr-x 3 root root  20 Jan 26 00:30 ..
