@@ -21,6 +21,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 PROGNAME=$(basename "$0" | cut -d. -f1)
+LOCKNAME="backupLock"
 
 # Read config files 
 for file in /etc/default/$PROGNAME /etc/sysconfig/$PROGNAME; do
@@ -36,8 +37,7 @@ if [ ! -z "$1" ] && [ -f "$1" ]; then
     source ${1}
 fi
 
-mongodump="${BINPATH}mongodump"
-mongo="${BINPATH}mongo"
+source common.sh
 
 command -v mail >/dev/null 2>&1 || { echo >&2 "mail command required but it's not installed.  Aborting."; exit 1; }
 
@@ -60,9 +60,11 @@ DNOW=`date +%u`                                   # Day number of the week 1 to 
 DOM=`date +%d`                                    # Date of the Month e.g. 27
 M=`date +%B`                                      # Month e.g January
 W=`date +%V`                                      # Week Number e.g 37
-LOGFILE=$BACKUPDIR/$DBHOST-`date +%H%M`.log       # Logfile Name
+LOGFILE=$BACKUPDIR/$DBHOST-`date +%H%M.$$`.log       # Logfile Name
 LOGERR=$BACKUPDIR/ERRORS_$DBHOST-`date +%H%M`.log # Logfile Name
 BACKUPFILES=""
+
+echo "LOGFILE: $LOGFILE"
 
 # Do we use oplog for point-in-time snapshotting?
 if [ "$OPLOG" = "yes" ]; then
@@ -97,21 +99,7 @@ fi
 # IO redirection for logging.
 # Redirect STDERR to STDOUT
 exec &> >(tee -a "$LOGFILE")
-#exec 2>&1
 
-#touch $LOGFILE
-#exec 6>&1           # Link file descriptor #6 with stdout.
-                    # Saves stdout.
-#exec > $LOGFILE     # stdout replaced with file $LOGFILE.
-
-
-#touch $LOGERR
-#exec 7>&2           # Link file descriptor #7 with stderr.
-                    # Saves stderr.
-#exec 2> $LOGERR     # stderr replaced with file $LOGERR.
-
-# When a desire is to receive log via e-mail then we close stdout and stderr.
-#[ "x$MAILCONTENT" == "xlog" ] && exec 6>&- # 7>&-
 
 # Functions
 
@@ -175,9 +163,10 @@ compression () {
 cleanupAndExit () {
     STATUS=$1
 
+    unlock 
+
     # Clean up IO redirection if we plan not to deliver log via e-mail.
     #[ ! "x$MAILCONTENT" == "xlog" ] && exec 1>&6 2>&7 6>&- 7>&-
-    
     if [ "$MAILCONTENT" = "log" ]; then
     
         if [[ $dbdumpresult != 0 ]]; then
@@ -188,6 +177,7 @@ cleanupAndExit () {
     else
         cat "$LOGFILE"
     fi
+
     
     # Clean up Logfile
     rm -f "$LOGFILE" "$LOGERR"
@@ -207,22 +197,7 @@ if [ "$PREBACKUP" ]; then
 fi
 
 
-secondary=`$mongo --quiet <<\EOF
-  var primary=rs.isMaster().primary;
-  if (primary == null) quit();
-  var hosts=rs.isMaster().hosts || [];
-  var secondaries = [];
-  hosts.forEach(function(e){if (e!== primary) {secondaries.push(e)}});
-  print(secondaries[0]);
-EOF`
-
-if [ -n "$secondary" ]; then
-    DBHOST=${secondary%%:*}
-    DBPORT=${secondary##*:}
-else
-    SECONDARY_WARNING="WARNING: No suitable Secondary found in the Replica Sets.  Falling back to ${DBHOST}."
-fi
-
+lock
 
 
 echo ======================================================================
@@ -234,7 +209,7 @@ if [ ! -z "$SECONDARY_WARNING" ]; then
 fi
 
 echo
-echo Backup of Database Server - $HOST on $DBHOST
+echo Backup of Database Server - $HOST on $DBHOST:$DBPORT [$setName]
 echo ======================================================================
 
 echo Backup Start `date`
@@ -287,6 +262,8 @@ dbdump $FILE
 dbdumpresult=$?
 
 echo dbdumpresult $dbdumpresult
+
+cp $LOGFILE $FILE
 
 if [[ $dbdumpresult = 0 ]]; then
     compression $FILE

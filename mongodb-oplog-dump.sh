@@ -15,23 +15,11 @@
 
 PROGNAME=$(basename "$0" | cut -d. -f1)
 BACKUPPROG="mongodb-backup"
+LOCKNAME="oplogDump"
 
-# Read config files, use the same config files as the backup script
-for file in /etc/default/$BACKUPPROG /etc/sysconfig/$BACKUPPROG ./$BACKUPPROG; do
-  if [ -f "$file" ]; then
-      echo "Reading config file $file"
-      source $file
-  fi
-done
+source common.sh
 
-# Include extra config file if specified on commandline, e.g. for backuping several remote dbs from central server
-if [ ! -z "$1" ] && [ -f "$1" ]; then
-    echo "Reading extra commandline config file $1"
-    source ${1}
-fi
-
-mongodump="${BINPATH}mongodump"
-mongo="${BINPATH}mongo"
+lock
 
 ## Functions
 ############################################################
@@ -60,6 +48,8 @@ max_number() {
 
 cleanupAndExit () {
     STATUS=$1
+    
+    unlock
 
     if [ "$MAILCONTENT" = "log" ]; then
 
@@ -96,7 +86,6 @@ if [ "$COMP" = "mongo" ]; then
     OPT="$OPT --gzip"
 fi
 
-echo "$OPT"
 
 DATE=`date +%Y-%m-%d_%H:%M:%S`
 FILE="$BACKUPDIR/oplog/$DATE-$maxTimestamp"
