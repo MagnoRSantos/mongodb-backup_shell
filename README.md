@@ -81,16 +81,49 @@ Assume that we want to restore a database up until 9:30AM on February 8, 2016.
 
     ```
     var date = ISODate("2016-02-08T09:30:00.000-0800")
-    date.getTime()
-    1454952600000
+    date.getTime()/1000
+    1454952600
     ```
 1. Extract the bson files using the same steps as before
 1. Run the `mongorestore` command with the `oplogReplay` and `oplogLimit` options. Note the the ``oplogLimit`` option specifies an exclusive endpoint for the replay, only transactions **newer** than the specified timestamp will be replayed.
 
     ```
-    mongorestore -u admin -p admin --authenticationDatabase admin --oplogReplay --oplogLimit 1454952600000:1 .
+    mongorestore -u admin -p admin --authenticationDatabase admin --oplogReplay --oplogLimit 1454952600:1 .
     ```
+    
+### Example 2 - Recover to a specific operation
+Assume that we are able to identify a specific operation that is the last known good point at which we want to restore a database. For example, if a database were accidently dropped we may want to recover all transactions that occurred up until the point that the database was dropped.
 
+1. Restore the nightly backup prior to the desired operation
+1. Identify the timestamp of recovery endpoint, the first operation that we wish to exclude from oplog replay. For example, this could be the timestamp of the drop database command.
+
+A drop database command would look like this in the oplog:
+
+    ```
+    {
+	  "ts" : Timestamp(1454968730, 1),
+	  "t" : NumberLong(3),
+	  "h" : NumberLong("1729104610031904583"),
+	  "v" : 2,
+	  "op" : "c",
+	  "ns" : "test.$cmd",
+	  "o" : { "dropDatabase" : 1 }
+    }
+    ```
+Given that, we should be able to query any such entries in the oplog to identify the timestamp of the offending operation which would be used as the recovery endpoint. For example:
+
+    ```
+    use local
+    db.oplog.rs.find({op:"c", o:{dropDatabase:1}})
+    ```
+Record the timestamp of the offending operation which will be used in the following steps.
+    
+1. Extract the bson files using the same steps as before
+1. Run the `mongorestore` command with the `oplogReplay` and `oplogLimit` options. Note the the ``oplogLimit`` option specifies an exclusive endpoint for the replay, only transactions **newer** than the specified timestamp will be replayed.
+
+    ```
+    mongorestore -u admin -p admin --authenticationDatabase admin --oplogReplay --oplogLimit 1454968730:1 .
+    ```
 
 
 
