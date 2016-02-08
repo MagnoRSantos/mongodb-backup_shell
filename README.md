@@ -100,14 +100,14 @@ Assume that we are able to identify a specific operation that is the last known 
 A drop database command would look like this in the oplog:
 
 	```
-    	{
-	  "ts" : Timestamp(1454968730, 1),
-	  "t" : NumberLong(3),
-	  "h" : NumberLong("1729104610031904583"),
-	  "v" : 2,
-	  "op" : "c",
-	  "ns" : "test.$cmd",
-	  "o" : { "dropDatabase" : 1 }
+	{
+  	"ts" : Timestamp(1454968730, 1),
+  	"t" : NumberLong(3),
+  	"h" : NumberLong("1729104610031904583"),
+  	"v" : 2,
+  	"op" : "c",
+  	"ns" : "test.$cmd",
+  	"o" : { "dropDatabase" : 1 }
 	}
 	```
 
