@@ -109,10 +109,11 @@ Assume that we are able to identify a specific operation that is the last known 
 	}
 	```
 
-Given that, we should be able to query any such entries in the oplog to identify the timestamp of the offending operation which would be used as the recovery endpoint. For example:
+    Given that, we should be able to query any such entries in the oplog to identify the timestamp of the offending operation which would be used as the recovery endpoint. For example:
 
 	```
 	xxx
+	123
 	```
     
 Record the timestamp of the offending operation which will be used in the following steps.
