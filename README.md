@@ -100,7 +100,7 @@ Assume that we are able to identify a specific operation that is the last known 
 A drop database command would look like this in the oplog:
 
 	```
-    {
+    	{
 	  "ts" : Timestamp(1454968730, 1),
 	  "t" : NumberLong(3),
 	  "h" : NumberLong("1729104610031904583"),
@@ -108,14 +108,14 @@ A drop database command would look like this in the oplog:
 	  "op" : "c",
 	  "ns" : "test.$cmd",
 	  "o" : { "dropDatabase" : 1 }
-    }
+	}
 	```
 
 Given that, we should be able to query any such entries in the oplog to identify the timestamp of the offending operation which would be used as the recovery endpoint. For example:
 
 	```
-    use local
-    db.oplog.rs.find({op:"c", o:{dropDatabase:1}})
+	use local
+	db.oplog.rs.find({op:"c", o:{dropDatabase:1}})
     	```
     
 
