@@ -114,9 +114,8 @@ Given that, we should be able to query any such entries in the oplog to identify
 	```
 	use local
 	db.oplog.rs.find({op:"c", o:{dropDatabase:1}})
-    	```
+	```
     
-
 Record the timestamp of the offending operation which will be used in the following steps.
     
 1. Extract the bson files using the same steps as before
