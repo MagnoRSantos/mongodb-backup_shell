@@ -30,7 +30,7 @@ drwxr-xr-x 2 root root   6 Jan 26 00:30 weekly
     ```
     cd 2016-01-26_16h46m.Tuesday
     ```
-1. Execute `mongorestore` with the appropriate arguments:
+1. Execute `mongorestore` with the appropriate arguments. The `oplogReplay` option should normally be used here to include any oplog entries added while the backup was being taken.
 
     ```
     mongorestore -u admin -p admin --authenticationDatabase admin --oplogReplay --drop --gzip .
@@ -44,6 +44,8 @@ Depending on the recovery secnario, there are 2 possible scenarios when replayin
 
 * Replaying an entire oplog file or files
 * Partially replaying an oplog file up until a specific point in time or operation
+
+The oplog must be replayed in order with no gaps from the time that the dump was taken. The oplog entries are idempotent, meaning the oplog entries can be replayed multiple times up to a specific point.
 
 ## Replaying entire oplog file(s)
 
@@ -62,6 +64,32 @@ Depending on the recovery secnario, there are 2 possible scenarios when replayin
     ```
 1. mongorestore -u admin -p admin --authenticationDatabase admin --oplogReplay .
 
+## Replaying oplog file(s) to a point in time or operation
+
+In order to replay the oplog up to a specific operation, we may need to first identify a specific operation in the oplog that will be the endpoint or last transaction that should be replayed. Assuming that a MongoDB instance is online and available and the corresponding oplog entries are still present, the `oplog.rs` collection in the `local` database can be queried via the mongo shell to identify the desired endpoint. Alternatively, the raw oplog dump files can be converted from binary form to JSON using the `bsondump` utility or loaded into a temporary collection where the entries can be queried.
+
+If only a specific time is required, we can specify a Timestamp to be used as the endpoint.
+
+Every entry in the oplog has a [Timestamp](https://docs.mongodb.org/manual/reference/bson-types/#document-bson-type-timestamp) corresponding to the operation time for each operation. The first field of the Timestamp is a 32-bit integer representing the number of seconds since Unix epoch.
+
+### Example 1 - Recover to a specific time
+Assume that we want to restore a database up until 9:30AM on February 8, 2016.
+
+1. Restore the nightly backup prior to the desired point in time
+1. Restore eash of the full oplog dumps, following the steps from the previous section. Assuming we are taking hourly oplog backups, and assuming the backups are taken at midnight we would restore the oplog dumps for 1AM through 6AM.
+1. Prepare for a partial replay of the oplog file containing the desired restore point. Convert the datetime of the desired restore point to an epoch time using the mongo shell:
+
+    ```
+    var date = ISODate("2016-02-08T09:30:00.000-0800")
+    date.getTime()
+    1454952600000
+    ```
+1. Extract the bson files using the same steps as before
+1. Run the `mongorestore` command with the `oplogReplay` and `oplogLimit` options. Note the the ``oplogLimit`` option specifies an exclusive endpoint for the replay, only transactions **newer** than the specified timestamp will be replayed.
+
+    ```
+    mongorestore -u admin -p admin --authenticationDatabase admin --oplogReplay --oplogLimit 1454952600000:1 .
+    ```
 
 
 
