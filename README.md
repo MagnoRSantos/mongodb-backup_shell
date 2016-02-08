@@ -79,7 +79,7 @@ Assume that we want to restore a database up until 9:30AM on February 8, 2016.
 1. Restore eash of the full oplog dumps, following the steps from the previous section. Assuming we are taking hourly oplog backups, and assuming the backups are taken at midnight we would restore the oplog dumps for 1AM through 6AM.
 1. Prepare for a partial replay of the oplog file containing the desired restore point. Convert the datetime of the desired restore point to an epoch time using the mongo shell:
 
-    ```
+    ```javascript
     var date = ISODate("2016-02-08T09:30:00.000-0800")
     date.getTime()/1000
     1454952600
@@ -97,7 +97,7 @@ Assume that we are able to identify a specific operation that is the last known 
 1. Restore the nightly backup prior to the desired operation
 1. Identify the timestamp of recovery endpoint, the first operation that we wish to exclude from oplog replay. For example, this could be the timestamp of the drop database command. A drop database command would look like this in the oplog:
 
-	```	
+	```javascript	
 	{
 	    "ts" : Timestamp(1454968730, 1),
 	    "t" : NumberLong(3),
