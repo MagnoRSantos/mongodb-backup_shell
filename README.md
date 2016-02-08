@@ -95,14 +95,17 @@ Assume that we want to restore a database up until 9:30AM on February 8, 2016.
 Assume that we are able to identify a specific operation that is the last known good point at which we want to restore a database. For example, if a database were accidently dropped we may want to recover all transactions that occurred up until the point that the database was dropped.
 
 1. Restore the nightly backup prior to the desired operation
-1. Identify the timestamp of recovery endpoint, the first operation that we wish to exclude from oplog replay. For example, this could be the timestamp of the drop database command.
+1. Identify the timestamp of recovery endpoint, the first operation that we wish to exclude from oplog replay. For example, this could be the timestamp of the drop database command. A drop database command would look like this in the oplog:
 
-A drop database command would look like this in the oplog:
-
-	```
+	```	
 	{
 	    "ts" : Timestamp(1454968730, 1),
-	
+	    "t" : NumberLong(3),
+	    "h" : NumberLong("1729104610031904583"),
+	    "v" : 2,
+	    "op" : "c",
+	    "ns" : "test.$cmd",
+	    "o" : { "dropDatabase" : 1 }
 	}
 	```
 
