@@ -16,7 +16,23 @@ drwxr-xr-x 5 root root 117 Jan 26 17:21 oplog
 -rw-r--r-- 1 root root  11 Jan 26 17:22 oplog-lastTimestamp
 drwxr-xr-x 2 root root   6 Jan 26 00:30 weekly
 ```
+# Locking
 
+The backup will attempt to hold a lock which is a document in the ``mongodb-backup`` database. If multiple backup scripts are executed at the same time, only the first process that obtains the lock will succeed. This is intented to provide the ability to have multiple machines attempt a backup at the same time to avoid missing backups in the event of a server outage.
+
+Failure to obtain the lock is not treated as an error condition. The output would appear as follows in the event of not obtaining the lock:
+
+	```javascript	
+	{
+	    "ts" : Timestamp(1454968730, 1),
+	    "t" : NumberLong(3),
+	    "h" : NumberLong("1729104610031904583"),
+	    "v" : 2,
+	    "op" : "c",
+	    "ns" : "test.$cmd",
+	    "o" : { "dropDatabase" : 1 }
+	}
+	```
 # Restoring a backup
 
 1. Locate the archive file to be restored. Depending on which compression option is configured for the backup, this will be a `tar`, `tgz`, or `.tar.bz2` file.
