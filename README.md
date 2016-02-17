@@ -22,8 +22,8 @@ The backup will attempt to hold a lock which is a document in the ``mongodb-back
 
 Failure to obtain the lock is not treated as an error condition. The output would appear as follows in the event of not obtaining the lock:
 
-	```javascript	
-	{
+ 	
+		{
 	    "ts" : Timestamp(1454968730, 1),
 	    "t" : NumberLong(3),
 	    "h" : NumberLong("1729104610031904583"),
@@ -31,8 +31,9 @@ Failure to obtain the lock is not treated as an error condition. The output woul
 	    "op" : "c",
 	    "ns" : "test.$cmd",
 	    "o" : { "dropDatabase" : 1 }
-	}
-	```
+		}
+
+
 # Restoring a backup
 
 1. Locate the archive file to be restored. Depending on which compression option is configured for the backup, this will be a `tar`, `tgz`, or `.tar.bz2` file.
