@@ -16,6 +16,7 @@
 PROGNAME=$(basename "$0" | cut -d. -f1)
 BACKUPPROG="mongodb-backup"
 LOCKNAME="oplogDump"
+sendSuccessEmail="no"
 
 source common.sh
 
@@ -46,22 +47,6 @@ max_number() {
     printf "%s\n" "$@" | sort -g | tail -n1
 }
 
-cleanupAndExit () {
-    STATUS=$1
-    
-    unlock
-
-    if [ "$MAILCONTENT" = "log" ]; then
-
-        if [[ $dbdumpresult != 0 ]]; then
-            cat "$LOGFILE" | mail -s "MongoDB oplog dump ERRORS REPORTED: Backup log for $HOST - $DATE" $MAILADDR
-        fi
-    else
-        cat "$LOGFILE"
-    fi
-
-    exit $STATUS
-}
 
 ############################################################
 
@@ -90,11 +75,7 @@ fi
 DATE=`date +%Y-%m-%d_%H:%M:%S`
 FILE="$BACKUPDIR/oplog/$DATE-$maxTimestamp"
 mkdir -p "$FILE"
-LOGFILE=$FILE/$HOST-`date +%H%M`.log
 
-# IO redirection for logging.
-# Redirect STDERR to STDOUT
-exec &> >(tee -a "$LOGFILE")
 
 currentDate=`date +%s`
 

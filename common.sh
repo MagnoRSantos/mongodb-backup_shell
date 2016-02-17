@@ -47,33 +47,13 @@ else
     HOST=$DBHOST
 fi
 
-#
-# TODO - this needs to be updated to be more intelligent about selecting a secondary
-#
-rsInfo=`$mongo --quiet <<\EOF
-  var primary=rs.isMaster().primary;
-  if (primary == null) quit();
-  var hosts=rs.isMaster().hosts || [];
-  var secondaries = [];
-  hosts.forEach(function(e){if (e!== primary) {secondaries.push(e)}});
-  var setName=rs.isMaster().setName;
-  print(secondaries[0]);
-  print(setName);
-  print(primary);
-EOF`
+LOGFILE=$BACKUPDIR/$DBHOST-`date +%Y-%m-%d_%H%M.$$`.log       # Logfile Name
+mkdir -p $BACKUPDIR
+# IO redirection for logging.
+# Redirect STDERR to STDOUT
+exec &> >(tee -a "$LOGFILE")
 
-secondary=`echo $rsInfo | awk '{print $1}'`
-setName=`echo $rsInfo | awk '{print $2}'`
-primary=`echo $rsInfo | awk '{print $3}'`
-
-if [ -n "$secondary" ]; then
-    DBHOST=${secondary%%:*}
-    DBPORT=${secondary##*:}
-else
-    SECONDARY_WARNING="WARNING: No suitable Secondary found in the Replica Sets.  Falling back to ${DBHOST}."
-fi
-
-
+echo "LOGFILE $LOGFILE"
 
 ##########################################################################
 # Functions
@@ -93,6 +73,12 @@ lock () {
 	EOF`
 
     lockCheck=`echo $lock | grep -e "\"nUpserted\" : 1" -e "\"nModified\" : 1"`
+
+    authFail=`echo $lock | grep -e "Authentication fail"`
+    if [ -n "$authFail" ]; then
+        echo "ERROR: Authentication failure, check credentials."
+        cleanupAndExit 1
+    fi
 
     if [ -z "$lockCheck" ]; then
         echo "$LOCKNAME is being held, another backup process is running. $lock"
@@ -115,3 +101,63 @@ unlock () {
 	EOF`
     echo "unlock: $unlock"
 }
+
+cleanupAndExit () {
+    STATUS=$1
+    echo "cleanup STATUS=$STATUS, dbdumpresult=$dbdumpresult"
+    unlock
+
+    # Clean up IO redirection if we plan not to deliver log via e-mail.
+    #[ ! "x$MAILCONTENT" == "xlog" ] && exec 1>&6 2>&7 6>&- 7>&-
+    if [ "$MAILCONTENT" = "log" ]; then
+        echo "Mailing log to $MAILADDR"    
+        if [[ "$dbdumpresult" != "0" || "$STATUS" != "0" ]]; then
+            echo "ERROR: Backup exiting with errors."
+            cat "$LOGFILE" | mail -s "MongoDB Backup ERRORS REPORTED: Backup log for $HOST - $DATE" $MAILADDR
+        elif [[ "$sendSuccessEmail" = "yes" ]]; then
+            cat "$LOGFILE" | mail -s "MongoDB Backup Log for $HOST - $DATE" $MAILADDR
+        fi
+    else
+        cat "$LOGFILE"
+    fi
+
+
+    # Clean up Logfile
+    #rm -f "$LOGFILE" "$LOGERR"
+
+    exit $STATUS
+}
+
+
+#
+# TODO - this needs to be updated to be more intelligent about selecting a secondary
+#
+rsInfo=`$mongo --quiet <<\EOF
+  var primary=rs.isMaster().primary;
+  if (primary == null) quit();
+  var hosts=rs.isMaster().hosts || [];
+  var secondaries = [];
+  hosts.forEach(function(e){if (e!== primary) {secondaries.push(e)}});
+  var setName=rs.isMaster().setName;
+  print(secondaries[0]);
+  print(setName);
+  print(primary);
+EOF`
+
+if [ "$?" -ne "0" ]; then
+  echo "Error checking isMaster via mongo shell $rsInfo" 
+  cleanupAndExit 1
+fi
+
+secondary=`echo $rsInfo | awk '{print $1}'`
+setName=`echo $rsInfo | awk '{print $2}'`
+primary=`echo $rsInfo | awk '{print $3}'`
+
+if [ -n "$secondary" ]; then
+    DBHOST=${secondary%%:*}
+    DBPORT=${secondary##*:}
+else
+    SECONDARY_WARNING="WARNING: No suitable Secondary found in the Replica Sets.  Falling back to ${DBHOST}."
+fi
+
+

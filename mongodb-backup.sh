@@ -22,6 +22,7 @@
 
 PROGNAME=$(basename "$0" | cut -d. -f1)
 LOCKNAME="backupLock"
+sendSuccessEmail="yes"
 
 # Read config files 
 for file in /etc/default/$PROGNAME /etc/sysconfig/$PROGNAME; do
@@ -60,8 +61,6 @@ DNOW=`date +%u`                                   # Day number of the week 1 to 
 DOM=`date +%d`                                    # Date of the Month e.g. 27
 M=`date +%B`                                      # Month e.g January
 W=`date +%V`                                      # Week Number e.g 37
-LOGFILE=$BACKUPDIR/$DBHOST-`date +%H%M.$$`.log       # Logfile Name
-LOGERR=$BACKUPDIR/ERRORS_$DBHOST-`date +%H%M`.log # Logfile Name
 BACKUPFILES=""
 
 echo "LOGFILE: $LOGFILE"
@@ -96,9 +95,6 @@ else
     SED="sed -i"
 fi
 
-# IO redirection for logging.
-# Redirect STDERR to STDOUT
-exec &> >(tee -a "$LOGFILE")
 
 
 # Functions
@@ -115,7 +111,7 @@ dbdump () {
     resultcode=$?
     echo "mongodump result: $resultcode"
     if [[ $resultcode != 0 ]]; then
-      echo "ERROR mongodump exited with code $resultcode"
+      echo "ERROR: mongodump exited with code $resultcode"
     else
       echo $currentDate > $lastBackupTimestampFile
     fi
@@ -158,31 +154,6 @@ compression () {
     fi
 
     return 0
-}
-
-cleanupAndExit () {
-    STATUS=$1
-
-    unlock 
-
-    # Clean up IO redirection if we plan not to deliver log via e-mail.
-    #[ ! "x$MAILCONTENT" == "xlog" ] && exec 1>&6 2>&7 6>&- 7>&-
-    if [ "$MAILCONTENT" = "log" ]; then
-    
-        if [[ $dbdumpresult != 0 ]]; then
-            cat "$LOGFILE" | mail -s "MongoDB Backup ERRORS REPORTED: Backup log for $HOST - $DATE" $MAILADDR
-        else
-            cat "$LOGFILE" | mail -s "MongoDB Backup Log for $HOST - $DATE" $MAILADDR
-        fi
-    else
-        cat "$LOGFILE"
-    fi
-
-    
-    # Clean up Logfile
-    rm -f "$LOGFILE" "$LOGERR"
-    
-    exit $STATUS
 }
 
 # Run command before we begin
@@ -258,12 +229,15 @@ elif [[ $DODAILY = "yes" ]] ; then
 
 fi
 
+# Delete logs older than 30 days
+find $BACKUPDIR -name "*.log" -not -newermt "30 days ago" -type f -delete
+
 dbdump $FILE 
 dbdumpresult=$?
 
 echo dbdumpresult $dbdumpresult
 
-cp $LOGFILE $FILE
+#cp $LOGFILE $FILE
 
 if [[ $dbdumpresult = 0 ]]; then
     compression $FILE
