@@ -16,6 +16,24 @@ drwxr-xr-x 5 root root 117 Jan 26 17:21 oplog
 -rw-r--r-- 1 root root  11 Jan 26 17:22 oplog-lastTimestamp
 drwxr-xr-x 2 root root   6 Jan 26 00:30 weekly
 ```
+# Locking
+
+The backup will attempt to hold a lock which is a document in the ``mongodb-backup`` database. If multiple backup scripts are executed at the same time, only the first process that obtains the lock will succeed. This is intented to provide the ability to have multiple machines attempt a backup at the same time to avoid missing backups in the event of a server outage.
+
+Failure to obtain the lock is not treated as an error condition. The output would appear as follows in the event of not obtaining the lock:
+
+ 	
+	backupLock is being held, another backup process is running. {
+	        "nMatched" : 0,
+	        "nUpserted" : 0,
+	        "nModified" : 0,
+	        "writeError" : {
+	                "code" : 11000,
+	                "errmsg" : "E11000 duplicate key error collection: mongodb-backup.backupLock index: _id_ dup key: { : \"shard0\" }"
+	        }
+	}
+
+In a rare instance of an abnormal termination of the backup script the lock could become "stuck" preventing backups from completing. This could be resolved by droping the mongodb-backup database or droping the mongodb-backup.backupLock collection.
 
 # Restoring a backup
 
