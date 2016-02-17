@@ -33,6 +33,7 @@ Failure to obtain the lock is not treated as an error condition. The output woul
 	        }
 	}
 
+In a rare instance of an abnormal termination of the backup script the lock could become "stuck" preventing backups from completing. This could be resolved by droping the mongodb-backup database or droping the mongodb-backup.backupLock collection.
 
 # Restoring a backup
 
