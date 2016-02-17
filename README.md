@@ -23,15 +23,15 @@ The backup will attempt to hold a lock which is a document in the ``mongodb-back
 Failure to obtain the lock is not treated as an error condition. The output would appear as follows in the event of not obtaining the lock:
 
  	
-		{
-	    "ts" : Timestamp(1454968730, 1),
-	    "t" : NumberLong(3),
-	    "h" : NumberLong("1729104610031904583"),
-	    "v" : 2,
-	    "op" : "c",
-	    "ns" : "test.$cmd",
-	    "o" : { "dropDatabase" : 1 }
-		}
+	backupLock is being held, another backup process is running. {
+	        "nMatched" : 0,
+	        "nUpserted" : 0,
+	        "nModified" : 0,
+	        "writeError" : {
+	                "code" : 11000,
+	                "errmsg" : "E11000 duplicate key error collection: mongodb-backup.backupLock index: _id_ dup key: { : \"shard0\" }"
+	        }
+	}
 
 
 # Restoring a backup
